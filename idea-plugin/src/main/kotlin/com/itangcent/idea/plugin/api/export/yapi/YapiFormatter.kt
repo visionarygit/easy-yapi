@@ -24,7 +24,7 @@ import java.util.*
 import java.util.regex.Pattern
 import java.util.stream.Collectors
 import kotlin.collections.ArrayList
-import kotlin.collections.LinkedHashMap
+import kotlin.collections.LinkedHashMap as LinkedHashMap1
 
 @Singleton
 open class YapiFormatter {
@@ -139,7 +139,7 @@ open class YapiFormatter {
     private fun parseParamsBySchema(params: MutableList<Param>?, rootDesc: String?): String? {
         if (params == null) return null
 
-        val result: HashMap<String, Any?> = HashMap()
+        val result: LinkedHashMap<String, Any?> = LinkedHashMap()
 
         result["type"] = "object"
         val properties: HashMap<String, Any?> = HashMap()
