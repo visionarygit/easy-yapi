@@ -88,4 +88,9 @@
                             serviceImplementation="com.itangcent.idea.plugin.settings.XmlSettingBinder"/>
     </extensions>
 
+    <extensionPoints>
+        <extensionPoint name="yapiExporterExecutor"
+                        beanClass="com.itangcent.idea.extensionPoint.YapiExporterExtensionPoint"/>
+    </extensionPoints>
+
 </idea-plugin>
