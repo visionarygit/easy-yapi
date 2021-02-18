@@ -42,7 +42,7 @@ class YapiExportAction : ApiExportAction("Export Yapi") {
 
     override fun actionPerformed(actionContext: ActionContext, project: Project?, anActionEvent: AnActionEvent) {
         super.actionPerformed(actionContext, project, anActionEvent)
-        actionContext.instance(YapiApiExporter::class).export()
+        actionContext.instance(YapiApiExporter::class).export(false)
     }
 
 }

@@ -16,10 +16,10 @@ import kotlin.collections.set
 
 class YapiApiExporter : AbstractYapiApiExporter() {
 
-    fun export() {
+    fun export(executeSilently : Boolean) {
         val serverFound = !yapiApiHelper!!.findServer().isNullOrBlank()
         if (serverFound) {
-            doExport()
+            doExport(executeSilently)
         } else {
             actionContext!!.runAsync {
                 Thread.sleep(200)
@@ -33,33 +33,38 @@ class YapiApiExporter : AbstractYapiApiExporter() {
 
                     yapiApiHelper.setYapiServer(yapiServer)
 
-                    doExport()
+                    doExport(executeSilently)
                 }
             }
         }
     }
 
-    private fun doExport() {
+    private fun doExport(executeSilently: Boolean) {
 
         logger!!.info("Start find apis...")
 
         SelectedHelper.Builder()
                 .dirFilter { dir, callBack ->
                     actionContext!!.runInSwingUI {
-                        try {
-                            val project = actionContext.instance(Project::class)
-                            val yes = Messages.showYesNoDialog(project,
-                                    "Export the model in directory [${ActionUtils.findCurrentPath(dir)}]?",
-                                    "Are you sure",
-                                    Messages.getQuestionIcon())
-                            if (yes == Messages.YES) {
-                                callBack(true)
-                            } else {
-                                logger.info("Cancel the operation export api from [${ActionUtils.findCurrentPath(dir)}]!")
+                        if (executeSilently) {
+                            logger.info("execute silently")
+                            callBack(true)
+                        } else {
+                            try {
+                                val project = actionContext.instance(Project::class)
+                                val yes = Messages.showYesNoDialog(project,
+                                        "Export the model in directory [${ActionUtils.findCurrentPath(dir)}]?",
+                                        "Are you sure",
+                                        Messages.getQuestionIcon())
+                                if (yes == Messages.YES) {
+                                    callBack(true)
+                                } else {
+                                    logger.info("Cancel the operation export api from [${ActionUtils.findCurrentPath(dir)}]!")
+                                    callBack(false)
+                                }
+                            } catch (e: Exception) {
                                 callBack(false)
                             }
-                        } catch (e: Exception) {
-                            callBack(false)
                         }
                     }
                 }

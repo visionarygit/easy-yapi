@@ -51,7 +51,7 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
         actionContext.cache(CommonDataKeys.NAVIGATABLE.name, PsiDirectoryImpl(psiManagerImpl, vf!!))
         actionContext.init(this)
 
-        actionContext.instance(YapiApiExporter::class).export()
+        actionContext.instance(YapiApiExporter::class).export(true)
     }
 
     fun init(actionContextBuilder : ActionContext.ActionContextBuilder, project : Project) {
