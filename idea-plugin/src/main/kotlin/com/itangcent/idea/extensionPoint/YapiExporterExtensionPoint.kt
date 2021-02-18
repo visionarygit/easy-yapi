@@ -1,5 +1,6 @@
 package com.itangcent.idea.extensionPoint
 
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.components.ServiceManager
@@ -9,6 +10,7 @@ import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.impl.PsiManagerImpl
 import com.intellij.psi.impl.file.PsiDirectoryImpl
+import com.itangcent.common.exception.ProcessCanceledException
 import com.itangcent.idea.plugin.api.cache.DefaultFileApiCacheRepository
 import com.itangcent.idea.plugin.api.cache.FileApiCacheRepository
 import com.itangcent.idea.plugin.api.cache.ProjectCacheRepository
@@ -34,8 +36,10 @@ import com.itangcent.intellij.jvm.PsiClassHelper
 import com.itangcent.intellij.jvm.standard.StandardJvmClassHelper
 import com.itangcent.intellij.logger.ConsoleRunnerLogger
 import com.itangcent.intellij.logger.Logger
+import com.itangcent.intellij.logger.NotificationHelper
 import com.itangcent.suv.http.ConfigurableHttpClientProvider
 import com.itangcent.suv.http.HttpClientProvider
+import org.apache.commons.lang3.exception.ExceptionUtils
 
 class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
 
@@ -51,10 +55,25 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
         actionContext.cache(CommonDataKeys.NAVIGATABLE.name, PsiDirectoryImpl(psiManagerImpl, vf!!))
         actionContext.init(this)
 
-        actionContext.instance(YapiApiExporter::class).export(true)
+        if (actionContext.lock()) {
+            actionContext.runAsync {
+                actionContext.instance(YapiApiExporter::class).export(true)
+            }
+        } else {
+            actionContext.runInWriteUI {
+                NotificationHelper.instance().notify {
+                    it.createNotification(
+                            "Found unfinished task!",
+                            NotificationType.ERROR
+                    )
+                }
+            }
+        }
+
+        actionContext.waitCompleteAsync()
     }
 
-    fun init(actionContextBuilder : ActionContext.ActionContextBuilder, project : Project) {
+    fun init(actionContextBuilder: ActionContext.ActionContextBuilder, project: Project) {
         actionContextBuilder.bindInstance(Project::class, project)
         actionContextBuilder.bind(DataContext::class) { it.with(ActionEventDataContextAdaptor::class).singleton() }
         actionContextBuilder.bindInstance("plugin.name", "easy_api")
@@ -79,7 +98,7 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
         actionContextBuilder.bind(LocalFileRepository::class, "projectCacheRepository") {
             it.with(ProjectCacheRepository::class).singleton()
         }
-        actionContextBuilder.bind(JvmClassHelper::class){it.with(StandardJvmClassHelper::class).singleton()}
+        actionContextBuilder.bind(JvmClassHelper::class) { it.with(StandardJvmClassHelper::class).singleton() }
 
     }
 }
