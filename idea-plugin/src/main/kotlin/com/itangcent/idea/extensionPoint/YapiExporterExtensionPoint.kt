@@ -43,9 +43,8 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 
 class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
 
-    fun doExport(path: String) {
+    fun doExport(project: Project, path: String) {
         val actionContextBuilder = ActionContext.builder()
-        val project = ProjectManager.getInstance().openProjects[0]
         this.init(actionContextBuilder, project)
 
         val actionContext = actionContextBuilder.build()
