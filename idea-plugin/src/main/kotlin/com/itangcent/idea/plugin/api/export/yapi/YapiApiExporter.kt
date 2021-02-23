@@ -4,6 +4,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.util.containers.ContainerUtil
 import com.itangcent.common.model.Doc
+import com.itangcent.common.utils.notNullOrBlank
 import com.itangcent.idea.plugin.Worker
 import com.itangcent.idea.plugin.api.export.Folder
 import com.itangcent.intellij.psi.SelectedHelper
