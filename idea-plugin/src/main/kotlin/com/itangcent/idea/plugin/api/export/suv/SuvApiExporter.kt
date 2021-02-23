@@ -4,7 +4,6 @@ import com.google.inject.Inject
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 import com.intellij.psi.PsiMethod
 import com.itangcent.common.logger.traceError
 import com.itangcent.common.model.Doc
@@ -15,6 +14,7 @@ import com.itangcent.common.utils.filterAs
 import com.itangcent.common.utils.notNullOrBlank
 import com.itangcent.common.utils.notNullOrEmpty
 import com.itangcent.debug.LoggerCollector
+import com.itangcent.idea.config.CachedResourceResolver
 import com.itangcent.idea.plugin.Worker
 import com.itangcent.idea.plugin.api.cache.DefaultFileApiCacheRepository
 import com.itangcent.idea.plugin.api.cache.FileApiCacheRepository
@@ -35,6 +35,7 @@ import com.itangcent.idea.utils.CustomizedPsiClassHelper
 import com.itangcent.idea.utils.FileSaveHelper
 import com.itangcent.idea.utils.RuleComputeListenerRegistry
 import com.itangcent.intellij.config.ConfigReader
+import com.itangcent.intellij.config.resource.ResourceResolver
 import com.itangcent.intellij.config.rule.RuleComputeListener
 import com.itangcent.intellij.config.rule.RuleParser
 import com.itangcent.intellij.constant.EventKey
@@ -284,7 +285,7 @@ class SuvApiExporter {
             builder.bind(RuleComputeListener::class) { it.with(RuleComputeListenerRegistry::class).singleton() }
             builder.bind(PsiClassHelper::class) { it.with(CustomizedPsiClassHelper::class).singleton() }
 
-
+            builder.bind(ResourceResolver::class) { it.with(CachedResourceResolver::class).singleton() }
             builder.bind(FileApiCacheRepository::class) { it.with(DefaultFileApiCacheRepository::class).singleton() }
             builder.bind(LocalFileRepository::class, "projectCacheRepository") {
                 it.with(ProjectCacheRepository::class).singleton()
@@ -455,6 +456,9 @@ class SuvApiExporter {
         private val yapiApiHelper: YapiApiHelper? = null
 
         @Inject
+        protected val yapiApiInputHelper: YapiApiInputHelper? = null
+
+        @Inject
         private val project: Project? = null
 
         override fun actionName(): String {
@@ -486,22 +490,12 @@ class SuvApiExporter {
         }
 
         override fun beforeExport(next: () -> Unit) {
-            val serverFound = !yapiApiHelper!!.findServer().isNullOrBlank()
+            val serverFound = yapiApiHelper!!.findServer().notNullOrBlank()
             if (serverFound) {
                 next()
             } else {
-                actionContext!!.runAsync {
-                    Thread.sleep(200)
-                    actionContext.runInSwingUI {
-                        val yapiServer = Messages.showInputDialog(project, "Input server of yapi",
-                                "server of yapi", Messages.getInformationIcon())
-                        if (yapiServer.isNullOrBlank()) {
-                            logger!!.info("No yapi server")
-                            return@runInSwingUI
-                        }
-
-                        yapiApiHelper.setYapiServer(yapiServer)
-
+                yapiApiInputHelper!!.inputServer {
+                    if (it.notNullOrBlank()) {
                         next()
                     }
                 }
@@ -525,40 +519,15 @@ class SuvApiExporter {
             private val folderNameCartMap: HashMap<String, CartInfo> = HashMap()
 
             @Synchronized
-            override fun getCartForDoc(folder: Folder, privateToken: String): CartInfo? {
+            override fun getCartForFolder(folder: Folder, privateToken: String): CartInfo? {
                 var cartInfo = folderNameCartMap["$privateToken${folder.name}"]
                 if (cartInfo != null) return cartInfo
 
-                cartInfo = super.getCartForDoc(folder, privateToken)
+                cartInfo = super.getCartForFolder(folder, privateToken)
                 if (cartInfo != null) {
                     folderNameCartMap["$privateToken${folder.name}"] = cartInfo
                 }
                 return cartInfo
-            }
-
-            private var tryInputTokenOfModule: HashSet<String> = HashSet()
-
-            override fun getTokenOfModule(module: String): String? {
-                val privateToken = super.getTokenOfModule(module)
-                if (!privateToken.isNullOrBlank()) {
-                    return privateToken
-                }
-
-                if (tryInputTokenOfModule.contains(module)) {
-                    return null
-                } else {
-                    tryInputTokenOfModule.add(module)
-                    val modulePrivateToken = actionContext!!.callInSwingUI {
-                        return@callInSwingUI Messages.showInputDialog(project, "Input Private Token Of Module:$module",
-                                "Yapi Private Token", Messages.getInformationIcon())
-                    }
-                    return if (modulePrivateToken.isNullOrBlank()) {
-                        null
-                    } else {
-                        yapiApiHelper!!.setToken(module, modulePrivateToken)
-                        modulePrivateToken
-                    }
-                }
             }
 
             private val successExportedCarts: MutableSet<String> = HashSet()

@@ -40,6 +40,8 @@ class Settings {
 
     var switchNotice: Boolean = true
 
+    var loginMode: Boolean = false
+
     //unit:s
     var httpTimeOut: Int = 5
 
@@ -58,6 +60,8 @@ class Settings {
 
     var markdownFormatType: String = MarkdownFormatType.SIMPLE.name
 
+    var builtInConfig: String? = null
+
     fun copy(): Settings {
         val newSetting = Settings()
         newSetting.postmanToken = this.postmanToken
@@ -75,6 +79,7 @@ class Settings {
         newSetting.yapiTokens = this.yapiTokens
         newSetting.enableUrlTemplating = this.enableUrlTemplating
         newSetting.switchNotice = this.switchNotice
+        newSetting.loginMode = this.loginMode
         newSetting.httpTimeOut = this.httpTimeOut
         newSetting.useRecommendConfig = this.useRecommendConfig
         newSetting.recommendConfigs = this.recommendConfigs
@@ -82,6 +87,7 @@ class Settings {
         newSetting.outputDemo = this.outputDemo
         newSetting.outputCharset = this.outputCharset
         newSetting.markdownFormatType = this.markdownFormatType
+        newSetting.builtInConfig = this.builtInConfig
         return newSetting
     }
 
@@ -106,6 +112,7 @@ class Settings {
         if (yapiTokens != other.yapiTokens) return false
         if (enableUrlTemplating != other.enableUrlTemplating) return false
         if (switchNotice != other.switchNotice) return false
+        if (loginMode != other.loginMode) return false
         if (httpTimeOut != other.httpTimeOut) return false
         if (useRecommendConfig != other.useRecommendConfig) return false
         if (recommendConfigs != other.recommendConfigs) return false
@@ -113,6 +120,7 @@ class Settings {
         if (outputDemo != other.outputDemo) return false
         if (outputCharset != other.outputCharset) return false
         if (markdownFormatType != other.markdownFormatType) return false
+        if (builtInConfig != other.builtInConfig) return false
 
         return true
     }
@@ -133,6 +141,7 @@ class Settings {
         result = 31 * result + (yapiTokens?.hashCode() ?: 0)
         result = 31 * result + enableUrlTemplating.hashCode()
         result = 31 * result + switchNotice.hashCode()
+        result = 31 * result + loginMode.hashCode()
         result = 31 * result + httpTimeOut
         result = 31 * result + useRecommendConfig.hashCode()
         result = 31 * result + recommendConfigs.hashCode()
@@ -140,6 +149,7 @@ class Settings {
         result = 31 * result + outputDemo.hashCode()
         result = 31 * result + outputCharset.hashCode()
         result = 31 * result + markdownFormatType.hashCode()
+        result = 31 * result + builtInConfig.hashCode()
         return result
     }
 

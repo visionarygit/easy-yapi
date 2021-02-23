@@ -28,7 +28,6 @@ import com.itangcent.intellij.extend.rx.ThrottleHelper
 import com.itangcent.intellij.extend.rx.mutual
 import com.itangcent.intellij.logger.Logger
 import com.itangcent.suv.http.ConfigurableHttpClientProvider
-import org.apache.commons.io.FileUtils
 import java.io.File
 import javax.swing.*
 
@@ -94,6 +93,8 @@ class EasyApiSettingGUI {
 
     private var readSetterCheckBox: JCheckBox? = null
 
+    private var yapiTokenLabel: JLabel? = null
+
     private var yapiServerTextField: JTextField? = null
 
     private var yapiTokenTextArea: JTextArea? = null
@@ -101,6 +102,8 @@ class EasyApiSettingGUI {
     private var enableUrlTemplatingCheckBox: JCheckBox? = null
 
     private var switchNoticeCheckBox: JCheckBox? = null
+
+    private var loginModeCheckBox: JCheckBox? = null
 
     private var formExpandedCheckBox: JCheckBox? = null
 
@@ -115,6 +118,8 @@ class EasyApiSettingGUI {
 
     private var previewTextArea: JTextArea? = null
     //endregion
+
+    private var builtInConfigTextArea: JTextArea? = null
 
     private val throttleHelper = ThrottleHelper()
 
@@ -222,6 +227,19 @@ class EasyApiSettingGUI {
         autoComputer.bind(switchNoticeCheckBox!!)
                 .mutual(this, "settings.switchNotice")
 
+        autoComputer.bind(loginModeCheckBox!!)
+                .mutual(this, "settings.loginMode")
+
+        autoComputer.bind(yapiTokenLabel!!)
+                .with<Boolean?>(this, "settings.loginMode")
+                .eval {
+                    if (it == true) {
+                        "projectIds"
+                    } else {
+                        "tokens"
+                    }
+                }
+
         autoComputer.bind(this.httpTimeOutTextField!!)
                 .with<Int?>(this, "settings.httpTimeOut")
                 .eval { (it ?: ConfigurableHttpClientProvider.defaultHttpTimeOut).toString() }
@@ -263,6 +281,9 @@ class EasyApiSettingGUI {
                     RecommendConfigLoader.buildRecommendConfig(configs,
                             "\n#${"-".repeat(20)}\n")
                 }
+
+        autoComputer.bind(this.builtInConfigTextArea!!)
+                .mutual(this, "settings.builtInConfig")
 
         //endregion  general-----------------------------------------------------
 
@@ -373,10 +394,7 @@ class EasyApiSettingGUI {
     private fun computeFolderSize(path: String): Long {
         val file = File(path)
         if (file.exists()) {
-            when {
-                file.isFile -> return FileUtils.sizeOf(file)
-                file.isDirectory -> return FileUtils.sizeOfDirectory(file)
-            }
+            return FileSizeUtils.sizeOf(file)
         }
         return 0
     }
@@ -469,7 +487,7 @@ class EasyApiSettingGUI {
         val files = chooser.choose(null, toSelect)
         if (files.notNullOrEmpty()) {
             val virtualFile = files[0]
-            val read = com.itangcent.common.utils.FileUtils.read(File(virtualFile.path), kotlin.text.Charsets.UTF_8)
+            val read = FileUtils.read(File(virtualFile.path), kotlin.text.Charsets.UTF_8)
             if (read.notNullOrEmpty()) {
                 setSettings(GsonUtils.fromJson(read!!, Settings::class))
             }

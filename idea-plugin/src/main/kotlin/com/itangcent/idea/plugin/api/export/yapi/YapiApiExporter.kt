@@ -10,7 +10,6 @@ import com.itangcent.intellij.psi.SelectedHelper
 import com.itangcent.intellij.util.ActionUtils
 import com.itangcent.intellij.util.FileType
 import java.util.*
-import kotlin.collections.HashSet
 import kotlin.collections.set
 
 
@@ -21,18 +20,8 @@ class YapiApiExporter : AbstractYapiApiExporter() {
         if (serverFound) {
             doExport(executeSilently)
         } else {
-            actionContext!!.runAsync {
-                Thread.sleep(200)
-                actionContext.runInSwingUI {
-                    val yapiServer = Messages.showInputDialog(project, "Input server of yapi",
-                            "server of yapi", Messages.getInformationIcon())
-                    if (yapiServer.isNullOrBlank()) {
-                        logger!!.info("No yapi server")
-                        return@runInSwingUI
-                    }
-
-                    yapiApiHelper.setYapiServer(yapiServer)
-
+            yapiApiInputHelper!!.inputServer {
+                if (it.notNullOrBlank()) {
                     doExport(executeSilently)
                 }
             }
@@ -85,44 +74,15 @@ class YapiApiExporter : AbstractYapiApiExporter() {
     private val folderNameCartMap: HashMap<String, CartInfo> = HashMap()
 
     @Synchronized
-    override fun getCartForDoc(folder: Folder, privateToken: String): CartInfo? {
+    override fun getCartForFolder(folder: Folder, privateToken: String): CartInfo? {
         var cartInfo = folderNameCartMap["$privateToken${folder.name}"]
         if (cartInfo != null) return cartInfo
 
-        cartInfo = super.getCartForDoc(folder, privateToken)
+        cartInfo = super.getCartForFolder(folder, privateToken)
         if (cartInfo != null) {
             folderNameCartMap["$privateToken${folder.name}"] = cartInfo
         }
         return cartInfo
-    }
-
-
-    private var tryInputTokenOfModule: HashSet<String> = HashSet()
-
-    override fun getTokenOfModule(module: String): String? {
-        val privateToken = super.getTokenOfModule(module)
-        if (!privateToken.isNullOrBlank()) {
-            return privateToken
-        }
-
-        //ignore the processed module without input token
-        if (!tryInputTokenOfModule.add(module)) {
-            return null
-        }
-
-        LOG!!.info("show dialog for input yapi token")
-        val modulePrivateToken = actionContext!!.callInSwingUI {
-            return@callInSwingUI Messages.showInputDialog(project, "Input Private Token Of Module:$module",
-                    "Yapi Private Token", Messages.getInformationIcon())
-        }
-        LOG.info("input yapi token:{$modulePrivateToken}")
-
-        return if (modulePrivateToken.isNullOrBlank()) {
-            null
-        } else {
-            yapiApiHelper!!.setToken(module, modulePrivateToken)
-            modulePrivateToken
-        }
     }
 
     private var successExportedCarts: MutableSet<String> = ContainerUtil.newConcurrentSet<String>()

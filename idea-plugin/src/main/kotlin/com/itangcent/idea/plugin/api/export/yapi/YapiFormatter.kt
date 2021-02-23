@@ -139,10 +139,10 @@ open class YapiFormatter {
     private fun parseParamsBySchema(params: MutableList<Param>?, rootDesc: String?): String? {
         if (params == null) return null
 
-        val result: LinkedHashMap<String, Any?> = LinkedHashMap()
+        val result: HashMap<String, Any?> = LinkedHashMap()
 
         result["type"] = "object"
-        val properties: LinkedHashMap<String, Any?> = LinkedHashMap()
+        val properties: HashMap<String, Any?> = LinkedHashMap()
         var requireds: LinkedList<String>? = null
         for (param in params) {
 
