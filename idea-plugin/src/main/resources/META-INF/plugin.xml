@@ -29,4 +29,9 @@
 
     <depends optional="true" config-file="easy-api-kotlin.xml">org.jetbrains.kotlin</depends>
     <depends optional="true" config-file="easy-api-scala.xml">org.intellij.scala</depends>
+    <actions>
+        <action id="pathTest" class="com.itangcent.idea.test.PathTest" text="pathTest" description="pathTest">
+            <add-to-group group-id="GenerateGroup" anchor="first"/>
+        </action>
+    </actions>
 </idea-plugin>
