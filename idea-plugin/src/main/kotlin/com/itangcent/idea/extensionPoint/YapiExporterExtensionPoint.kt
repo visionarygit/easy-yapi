@@ -6,11 +6,11 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.extensions.AbstractExtensionPointBean
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.PsiManagerImpl
 import com.intellij.psi.impl.file.PsiDirectoryImpl
-import com.itangcent.common.exception.ProcessCanceledException
+import com.intellij.psi.impl.source.PsiJavaFileImpl
 import com.itangcent.idea.plugin.api.cache.DefaultFileApiCacheRepository
 import com.itangcent.idea.plugin.api.cache.FileApiCacheRepository
 import com.itangcent.idea.plugin.api.cache.ProjectCacheRepository
@@ -39,7 +39,6 @@ import com.itangcent.intellij.logger.Logger
 import com.itangcent.intellij.logger.NotificationHelper
 import com.itangcent.suv.http.ConfigurableHttpClientProvider
 import com.itangcent.suv.http.HttpClientProvider
-import org.apache.commons.lang3.exception.ExceptionUtils
 
 class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
 
@@ -70,6 +69,34 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
         }
 
         actionContext.waitCompleteAsync()
+    }
+
+    fun doExportByPsiFile(project: Project, psiFile : PsiFile) {
+        val actionContextBuilder = ActionContext.builder()
+        this.init(actionContextBuilder, project)
+
+        val actionContext = actionContextBuilder.build()
+        val psiJavaFileImpl = psiFile as PsiJavaFileImpl
+        actionContext.cache(CommonDataKeys.PSI_FILE.name, psiJavaFileImpl);
+        actionContext.init(this)
+
+        if (actionContext.lock()) {
+            actionContext.runAsync {
+                actionContext.instance(YapiApiExporter::class).export(true)
+            }
+        } else {
+            actionContext.runInWriteUI {
+                NotificationHelper.instance().notify {
+                    it.createNotification(
+                        "Found unfinished task!",
+                        NotificationType.ERROR
+                    )
+                }
+            }
+        }
+
+        actionContext.waitCompleteAsync()
+
     }
 
     fun init(actionContextBuilder: ActionContext.ActionContextBuilder, project: Project) {
