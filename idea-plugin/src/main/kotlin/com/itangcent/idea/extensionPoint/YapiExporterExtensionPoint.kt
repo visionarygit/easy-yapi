@@ -108,9 +108,7 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
         }
         val navigatables: Array<Navigatable> = classTreeNodeList.toTypedArray()
         actionContext.cache(CommonDataKeys.NAVIGATABLE_ARRAY.name, navigatables)
-        actionContext.init(this)
         actionContext.cache(CommonDataKeys.PSI_FILE.name,null)
-        actionContext.init(this)
         actionContext.cache(CommonDataKeys.NAVIGATABLE.name, null)
         actionContext.init(this)
 
