@@ -1,5 +1,7 @@
 package com.itangcent.idea.extensionPoint
 
+import com.intellij.ide.projectView.ViewSettings
+import com.intellij.ide.projectView.impl.nodes.ClassTreeNode
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
@@ -7,14 +9,19 @@ import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.extensions.AbstractExtensionPointBean
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.pom.Navigatable
+import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.PsiManagerImpl
 import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.PsiJavaFileImpl
+import com.intellij.psi.util.PsiTreeUtil
 import com.itangcent.idea.plugin.api.cache.DefaultFileApiCacheRepository
 import com.itangcent.idea.plugin.api.cache.FileApiCacheRepository
 import com.itangcent.idea.plugin.api.cache.ProjectCacheRepository
-import com.itangcent.idea.plugin.api.export.*
+import com.itangcent.idea.plugin.api.export.ClassExporter
+import com.itangcent.idea.plugin.api.export.DefaultMethodDocClassExporter
+import com.itangcent.idea.plugin.api.export.LinkResolver
 import com.itangcent.idea.plugin.api.export.yapi.*
 import com.itangcent.idea.plugin.config.RecommendConfigReader
 import com.itangcent.idea.plugin.rule.SuvRuleParser
@@ -39,21 +46,29 @@ import com.itangcent.intellij.logger.Logger
 import com.itangcent.intellij.logger.NotificationHelper
 import com.itangcent.suv.http.ConfigurableHttpClientProvider
 import com.itangcent.suv.http.HttpClientProvider
+import java.util.*
 
 class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
 
     fun doExport(project: Project, path: String) {
-        val actionContext = getActionContextByDirectoryPath(project,path)
+        val actionContext = getActionContextByDirectoryPath(project, path)
+        doCommonExport(actionContext)
+    }
+
+    fun doExportByPsiFile(project: Project, psiFile: PsiFile) {
+        val actionContext = getActionContextByPsiFile(project, psiFile)
         doCommonExport(actionContext)
     }
 
 
-    fun doExportByPsiFile(project: Project, psiFile : PsiFile) {
-        val actionContext = getActionContextByPsiFile(project,psiFile)
+    fun doExportByPsiFiles(project: Project, psiFiles: List<PsiFile>) {
+        val actionContext = getActionContextByPsiFiles(project, psiFiles)
         doCommonExport(actionContext)
+
     }
 
-    fun getActionContextByDirectoryPath(project: Project, path: String) : ActionContext{
+
+    fun getActionContextByDirectoryPath(project: Project, path: String): ActionContext {
         val actionContextBuilder = ActionContext.builder()
         this.init(actionContextBuilder, project)
 
@@ -66,7 +81,7 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
         return actionContext
     }
 
-    fun getActionContextByPsiFile(project: Project, psiFile : PsiFile) : ActionContext{
+    fun getActionContextByPsiFile(project: Project, psiFile: PsiFile): ActionContext {
         val actionContextBuilder = ActionContext.builder()
         this.init(actionContextBuilder, project)
 
@@ -77,7 +92,32 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
         return actionContext
     }
 
-    fun doCommonExport(actionContext:ActionContext){
+    fun getActionContextByPsiFiles(project: Project, psiFiles: List<PsiFile>): ActionContext {
+        val actionContextBuilder = ActionContext.builder()
+        this.init(actionContextBuilder, project)
+
+        val actionContext = actionContextBuilder.build()
+
+        val classTreeNodeList: MutableList<ClassTreeNode> = ArrayList()
+        for(psiFile in psiFiles) {
+            val psiClass = PsiTreeUtil.findChildOfType(psiFile, PsiClass::class.java)
+            if(psiClass != null) {
+                val classTreeNode = ClassTreeNode(project, psiClass, ViewSettings.DEFAULT)
+                classTreeNodeList.add(classTreeNode)
+            }
+        }
+        val navigatables: Array<Navigatable> = classTreeNodeList.toTypedArray()
+        actionContext.cache(CommonDataKeys.NAVIGATABLE_ARRAY.name, navigatables)
+        actionContext.init(this)
+        actionContext.cache(CommonDataKeys.PSI_FILE.name,null)
+        actionContext.init(this)
+        actionContext.cache(CommonDataKeys.NAVIGATABLE.name, null)
+        actionContext.init(this)
+
+        return actionContext
+    }
+
+    fun doCommonExport(actionContext: ActionContext) {
         if (actionContext.lock()) {
             actionContext.runAsync {
                 actionContext.instance(YapiApiExporter::class).export(true)
@@ -104,20 +144,31 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
         actionContextBuilder.bind(Logger::class) { it.with(ConfigurableLogger::class).singleton() }
         actionContextBuilder.bind(Logger::class, "delegate.logger") { it.with(ConsoleRunnerLogger::class).singleton() }
         actionContextBuilder.bind(LocalFileRepository::class) { it.with(DefaultLocalFileRepository::class).singleton() }
-        actionContextBuilder.bind(HttpClientProvider::class) { it.with(ConfigurableHttpClientProvider::class).singleton() }
+        actionContextBuilder.bind(HttpClientProvider::class) {
+            it.with(ConfigurableHttpClientProvider::class).singleton()
+        }
         actionContextBuilder.bind(LinkResolver::class) { it.with(YapiLinkResolver::class).singleton() }
-        actionContextBuilder.bind(ConfigReader::class, "delegate_config_reader") { it.with(YapiConfigReader::class).singleton() }
+        actionContextBuilder.bind(ConfigReader::class, "delegate_config_reader") {
+            it.with(YapiConfigReader::class).singleton()
+        }
         actionContextBuilder.bind(ConfigReader::class) { it.with(RecommendConfigReader::class).singleton() }
         actionContextBuilder.bind(YapiApiHelper::class) { it.with(YapiCachedApiHelper::class).singleton() }
-        actionContextBuilder.bindInstance("AVAILABLE_CLASS_EXPORTER", arrayOf<Any>(YapiSpringRequestClassExporter::class, YapiMethodDocClassExporter::class))
+        actionContextBuilder.bindInstance(
+            "AVAILABLE_CLASS_EXPORTER",
+            arrayOf<Any>(YapiSpringRequestClassExporter::class, YapiMethodDocClassExporter::class)
+        )
         actionContextBuilder.bindInstance("file.save.default", "yapi.json")
         actionContextBuilder.bindInstance("file.save.last.location.key", "com.itangcent.yapi.export.path")
         actionContextBuilder.bind(PsiClassHelper::class) { it.with(YapiPsiClassHelper::class).singleton() }
         actionContextBuilder.bind(RuleParser::class) { it.with(SuvRuleParser::class).singleton() }
-        actionContextBuilder.bind(RuleComputeListener::class) { it.with(RuleComputeListenerRegistry::class).singleton() }
+        actionContextBuilder.bind(RuleComputeListener::class) {
+            it.with(RuleComputeListenerRegistry::class).singleton()
+        }
         actionContextBuilder.bind(PsiClassHelper::class) { it.with(CustomizedPsiClassHelper::class).singleton() }
         actionContextBuilder.bind(ClassExporter::class) { it.with(DefaultMethodDocClassExporter::class).singleton() }
-        actionContextBuilder.bind(FileApiCacheRepository::class) { it.with(DefaultFileApiCacheRepository::class).singleton() }
+        actionContextBuilder.bind(FileApiCacheRepository::class) {
+            it.with(DefaultFileApiCacheRepository::class).singleton()
+        }
         actionContextBuilder.bind(LocalFileRepository::class, "projectCacheRepository") {
             it.with(ProjectCacheRepository::class).singleton()
         }
