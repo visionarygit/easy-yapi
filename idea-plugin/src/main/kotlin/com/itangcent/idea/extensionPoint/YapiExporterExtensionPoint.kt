@@ -2,7 +2,9 @@ package com.itangcent.idea.extensionPoint
 
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.nodes.ClassTreeNode
+import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
+import com.intellij.notification.Notifications
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.components.ServiceManager
@@ -46,7 +48,7 @@ import com.itangcent.intellij.logger.Logger
 import com.itangcent.intellij.logger.NotificationHelper
 import com.itangcent.suv.http.ConfigurableHttpClientProvider
 import com.itangcent.suv.http.HttpClientProvider
-import java.util.*
+import java.util.ArrayList
 
 class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
 
@@ -60,13 +62,16 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
         doCommonExport(actionContext)
     }
 
-
-    fun doExportByPsiFiles(project: Project, psiFiles: List<PsiFile>) {
-        val actionContext = getActionContextByPsiFiles(project, psiFiles)
-        doCommonExport(actionContext)
-
+    fun doExportByPsiFileInOneDialog(project: Project, psiFile: PsiFile) {
+        val actionContext = getActionContextByPsiFile(project, psiFile)
+        doCommonExportInOneDialog(actionContext)
     }
 
+    fun doExportByPsiFiles(project: Project, psiFiles: List<PsiFile>) {
+        for (psiFile in psiFiles) {
+            doExportByPsiFileInOneDialog(project, psiFile)
+        }
+    }
 
     fun getActionContextByDirectoryPath(project: Project, path: String): ActionContext {
         val actionContextBuilder = ActionContext.builder()
@@ -92,34 +97,28 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
         return actionContext
     }
 
-    fun getActionContextByPsiFiles(project: Project, psiFiles: List<PsiFile>): ActionContext {
-        val actionContextBuilder = ActionContext.builder()
-        this.init(actionContextBuilder, project)
-
-        val actionContext = actionContextBuilder.build()
-
-        val classTreeNodeList: MutableList<ClassTreeNode> = ArrayList()
-        for(psiFile in psiFiles) {
-            val psiClass = PsiTreeUtil.findChildOfType(psiFile, PsiClass::class.java)
-            if(psiClass != null) {
-                val classTreeNode = ClassTreeNode(project, psiClass, ViewSettings.DEFAULT)
-                classTreeNodeList.add(classTreeNode)
-            }
-        }
-        val navigatables: Array<Navigatable> = classTreeNodeList.toTypedArray()
-        actionContext.cache(CommonDataKeys.NAVIGATABLE_ARRAY.name, navigatables)
-        actionContext.cache(CommonDataKeys.PSI_FILE.name,null)
-        actionContext.cache(CommonDataKeys.NAVIGATABLE.name, null)
-        actionContext.init(this)
-
-        return actionContext
-    }
-
     fun doCommonExport(actionContext: ActionContext) {
         if (actionContext.lock()) {
             actionContext.runAsync {
                 actionContext.instance(YapiApiExporter::class).export(true)
             }
+        } else {
+            actionContext.runInWriteUI {
+                NotificationHelper.instance().notify {
+                    it.createNotification(
+                        "Found unfinished task!",
+                        NotificationType.ERROR
+                    )
+                }
+            }
+        }
+
+        actionContext.waitCompleteAsync()
+    }
+
+    fun doCommonExportInOneDialog(actionContext: ActionContext) {
+        if (actionContext.lock()) {
+            actionContext.instance(YapiApiExporter::class).export(true)
         } else {
             actionContext.runInWriteUI {
                 NotificationHelper.instance().notify {
