@@ -11,6 +11,7 @@ import com.itangcent.idea.plugin.api.cache.DefaultFileApiCacheRepository
 import com.itangcent.idea.plugin.api.cache.FileApiCacheRepository
 import com.itangcent.idea.plugin.api.cache.ProjectCacheRepository
 import com.itangcent.idea.plugin.api.export.ClassExporter
+import com.itangcent.idea.plugin.api.export.ComboClassExporter
 import com.itangcent.idea.plugin.api.export.DefaultMethodDocClassExporter
 import com.itangcent.idea.plugin.api.export.LinkResolver
 import com.itangcent.idea.plugin.api.export.yapi.*
@@ -97,7 +98,8 @@ class YapiExporterExtensionPoint : AbstractExtensionPointBean() {
             it.with(RuleComputeListenerRegistry::class).singleton()
         }
         actionContextBuilder.bind(PsiClassHelper::class) { it.with(CustomizedPsiClassHelper::class).singleton() }
-        actionContextBuilder.bind(ClassExporter::class) { it.with(DefaultMethodDocClassExporter::class).singleton() }
+        actionContextBuilder.bind(ClassExporter::class) { it.with(ComboClassExporter::class).singleton() }
+        actionContextBuilder.bindInstance("AVAILABLE_CLASS_EXPORTER", arrayOf<Any>(YapiSpringRequestClassExporter::class, YapiMethodDocClassExporter::class))
         actionContextBuilder.bind(FileApiCacheRepository::class) {
             it.with(DefaultFileApiCacheRepository::class).singleton()
         }
