@@ -1,3 +1,7 @@
+* 2.1.8
+
+	* fix: use `asKV` instead of `as KV<>` [(#364)](https://github.com/tangcent/easy-yapi/pull/364)
+
 * 2.1.0~
 
     * fix: always trim the name of folder [(#314)](https://github.com/tangcent/easy-yapi/pull/314)
@@ -24,6 +28,20 @@
     
     * opti: support built-in config [(#341)](https://github.com/tangcent/easy-yapi/pull/341)
 
+    * opti: `properties.additional` support url [(#345)](https://github.com/tangcent/easy-yapi/pull/345)
+    
+    * opti: support `param.doc` for export methodDoc [(#347)](https://github.com/tangcent/easy-yapi/pull/347)
+    
+    * fix:change the action name from Debug to ScriptExecutor [(#348)](https://github.com/tangcent/easy-yapi/pull/348)
+    
+    * opti: support `url.cache.expire` [(#349)](https://github.com/tangcent/easy-yapi/pull/349)
+    
+    * opti: add recommend third config [(#351)](https://github.com/tangcent/easy-yapi/pull/351)
+    
+    * opti: show default built-in config in setting [(#353)](https://github.com/tangcent/easy-yapi/pull/353)
+    
+    * fix: bind `settings.builtInConfig` as nullable [(#358)](https://github.com/tangcent/easy-yapi/pull/358)
+    
 * 2.0.0~
 
     * feat: support rule util `session` [(#273)](https://github.com/tangcent/easy-yapi/pull/273)
